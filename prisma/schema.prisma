@@ -1,0 +1,299 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PigeonSex {
+  MALE
+  FEMALE
+  UNKNOWN
+}
+
+enum PigeonStatus {
+  ACTIVE
+  BREEDER
+  LOST
+  SOLD
+  DECEASED
+  YOUNG
+}
+
+enum RaceCategory {
+  SPEED
+  SEMI_DISTANCE
+  DISTANCE
+  MARATHON
+  GENERAL
+}
+
+enum RaceStatus {
+  PLANNED
+  ONGOING
+  FINISHED
+  CANCELLED
+}
+
+enum RaceResultStatus {
+  ARRIVED
+  NOT_ARRIVED
+  LOST
+  DISQUALIFIED
+}
+
+enum TrainingResultStatus {
+  ARRIVED
+  DELAYED
+  LOST
+}
+
+enum TreatmentType {
+  ANTIBIOTIC
+  ANTIPARASITIC
+  VACCINE
+  VITAMINS
+  RECOVERY
+  PREVENTIVE
+  OTHER
+}
+
+model User {
+  id           String     @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String     @unique
+  passwordHash String
+  phone        String?
+  role         Role       @default(USER)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  loft         Loft?
+  pigeons      Pigeon[]
+  trainings    Training[]
+  races        Race[]
+  treatments   Treatment[]
+  vaccinations Vaccination[]
+}
+
+model Loft {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  breederName  String
+  city         String?
+  county       String?
+  country      String   @default("România")
+  latitude     Float?
+  longitude    Float?
+  club         String?
+  association  String?
+  breederCode  String?
+  publicEmail  String?
+  phone        String?
+  website      String?
+  description  String?
+  logoUrl      String?
+  imageUrl     String?
+  achievements String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  pigeons   Pigeon[]
+  trainings Training[]
+  races     Race[]
+}
+
+model Pigeon {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loftId         String?
+  loft           Loft?        @relation(fields: [loftId], references: [id])
+  ringNumber     String
+  ringCountry    String       @default("RO")
+  ringYear       Int
+  name           String?
+  sex            PigeonSex    @default(UNKNOWN)
+  color          String?
+  bloodline      String?
+  status         PigeonStatus @default(ACTIVE)
+  birthDate      DateTime?
+  fatherId       String?
+  father         Pigeon?      @relation("PigeonFather", fields: [fatherId], references: [id])
+  motherId       String?
+  mother         Pigeon?      @relation("PigeonMother", fields: [motherId], references: [id])
+  mainImageUrl   String?
+  notes          String?
+  importantResults String?
+  isPublic       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  fatherOf       Pigeon[]     @relation("PigeonFather")
+  motherOf       Pigeon[]     @relation("PigeonMother")
+  images         PigeonImage[]
+  trainingResults TrainingResult[]
+  raceResults    RaceResult[]
+  treatments     TreatmentPigeon[]
+  vaccinations   VaccinationPigeon[]
+
+  @@unique([userId, ringNumber])
+}
+
+model PigeonImage {
+  id        String   @id @default(cuid())
+  pigeonId  String
+  pigeon    Pigeon   @relation(fields: [pigeonId], references: [id], onDelete: Cascade)
+  imageUrl  String
+  createdAt DateTime @default(now())
+}
+
+model Training {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loftId           String?
+  loft             Loft?    @relation(fields: [loftId], references: [id])
+  date             DateTime
+  releaseTime      DateTime?
+  releaseLocation  String?
+  releaseLatitude  Float?
+  releaseLongitude Float?
+  distanceKm       Float?
+  weather          String?
+  wind             String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  results TrainingResult[]
+}
+
+model TrainingResult {
+  id                  String               @id @default(cuid())
+  trainingId          String
+  training            Training             @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  pigeonId            String
+  pigeon              Pigeon               @relation(fields: [pigeonId], references: [id])
+  arrivalTime         DateTime?
+  flightTimeMinutes   Float?
+  speedMetersPerMinute Float?
+  status              TrainingResultStatus @default(ARRIVED)
+  notes               String?
+}
+
+model Race {
+  id               String       @id @default(cuid())
+  userId           String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loftId           String?
+  loft             Loft?        @relation(fields: [loftId], references: [id])
+  name             String
+  organizer        String?
+  club             String?
+  date             DateTime
+  releaseTime      DateTime?
+  releaseLocation  String?
+  releaseLatitude  Float?
+  releaseLongitude Float?
+  distanceKm       Float?
+  category         RaceCategory @default(GENERAL)
+  weather          String?
+  wind             String?
+  status           RaceStatus   @default(PLANNED)
+  notes            String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  results RaceResult[]
+}
+
+model RaceResult {
+  id                     String           @id @default(cuid())
+  raceId                 String
+  race                   Race             @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  pigeonId               String
+  pigeon                 Pigeon           @relation(fields: [pigeonId], references: [id])
+  arrivalTime            DateTime?
+  flightTimeMinutes      Float?
+  speedMetersPerMinute   Float?
+  loftRank               Int?
+  clubRank               Int?
+  regionalRank           Int?
+  nationalRank           Int?
+  totalPigeons           Int?
+  score                  Float?
+  classificationPercent  Float?
+  status                 RaceResultStatus @default(ARRIVED)
+  notes                  String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+}
+
+model Treatment {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  type      TreatmentType @default(OTHER)
+  startDate DateTime
+  endDate   DateTime?
+  dosage    String?
+  notes     String?
+  applyToAll Boolean     @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  pigeons TreatmentPigeon[]
+}
+
+model TreatmentPigeon {
+  id          String    @id @default(cuid())
+  treatmentId String
+  treatment   Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  pigeonId    String
+  pigeon      Pigeon    @relation(fields: [pigeonId], references: [id])
+
+  @@unique([treatmentId, pigeonId])
+}
+
+model Vaccination {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  disease         String?
+  vaccinationDate DateTime
+  boosterDate     DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  pigeons VaccinationPigeon[]
+}
+
+model VaccinationPigeon {
+  id            String      @id @default(cuid())
+  vaccinationId String
+  vaccination   Vaccination @relation(fields: [vaccinationId], references: [id], onDelete: Cascade)
+  pigeonId      String
+  pigeon        Pigeon      @relation(fields: [pigeonId], references: [id])
+
+  @@unique([vaccinationId, pigeonId])
+}
