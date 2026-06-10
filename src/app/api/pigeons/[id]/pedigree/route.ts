@@ -25,15 +25,17 @@ async function getPigeonWithAncestors(id: string | null, depth: number): Promise
   return { ...pigeon, father, mother }
 }
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Neautorizat' }, { status: 401 })
 
+  const { id } = await params
+
   const pigeon = await prisma.pigeon.findFirst({
-    where: { id: params.id, userId: session.user.id },
+    where: { id, userId: session.user.id },
   })
   if (!pigeon) return NextResponse.json({ error: 'Porumbel negăsit' }, { status: 404 })
 
-  const pedigree = await getPigeonWithAncestors(params.id, 3)
+  const pedigree = await getPigeonWithAncestors(id, 3)
   return NextResponse.json(pedigree)
 }
