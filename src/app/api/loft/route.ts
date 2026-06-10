@@ -3,6 +3,8 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { loftSchema } from '@/lib/validations'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Neautorizat' }, { status: 401 })
